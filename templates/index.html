@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Treasury Operations | BOT Fx Rate ETL</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --secondary: #10B981;
+            --secondary-hover: #059669;
+            --bg-body: #0F172A;
+            --bg-card: rgba(30, 41, 59, 0.7);
+            --text-main: #F8FAFC;
+            --text-muted: #94A3B8;
+            --border: rgba(255, 255, 255, 0.1);
+            --focus-ring: rgba(79, 70, 229, 0.5);
+            --error: #EF4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0F172A 0%, #1E1B4B 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        /* Abstract Background Decor */
+        .decor {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(79,70,229,0.15) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        .decor.top-left { top: -150px; left: -150px; }
+        .decor.bottom-right { bottom: -150px; right: -150px; background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, rgba(0,0,0,0) 70%); }
+
+        .app-container {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 800px;
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+            margin: auto;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        .header h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.8rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #ffffff, #a5b4fc);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+            position: relative;
+            flex: 1 1 200px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #CBD5E1;
+            letter-spacing: 0.01em;
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.5);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 16px;
+            color: var(--text-main);
+            font-family: 'Inter', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px var(--focus-ring);
+            background: rgba(15, 23, 42, 0.8);
+        }
+        
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+            opacity: 0.7;
+            transition: 0.2s;
+        }
+        input[type="date"]::-webkit-calendar-picker-indicator:hover {
+            opacity: 1;
+        }
+
+        .btn {
+            width: 100%;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.4);
+        }
+        
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.5);
+        }
+        
+        .btn-success {
+            background: var(--secondary);
+            box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);
+            margin-top: 0;
+            width: auto;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+        }
+
+        .btn-success:hover {
+            background: var(--secondary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.5);
+        }
+
+        button:active {
+            transform: translateY(0) !important;
+        }
+        
+        .spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        button.loading .spinner { display: block; }
+        button.loading .btn-text { display: none; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .alert-container {
+            margin-top: 20px;
+            min-height: 40px;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            animation: fadeIn 0.4s ease;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #FCA5A5;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .alert.success {
+            background: rgba(16, 185, 129, 0.1);
+            color: #6EE7B7;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+        }
+
+        .preview-section {
+            display: none;
+            margin-top: 30px;
+            border-top: 1px solid var(--border);
+            padding-top: 30px;
+            animation: fadeIn 0.6s ease;
+        }
+        
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .preview-header h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #E2E8F0;
+        }
+
+        .table-container {
+            max-height: 350px;
+            overflow-y: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(15, 23, 42, 0.4);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        th {
+            background: rgba(255, 255, 255, 0.05);
+            color: #CBD5E1;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        td { color: #94A3B8; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(255, 255, 255, 0.02); color: #F8FAFC; }
+    </style>
+</head>
+<body>
+
+    <div class="decor top-left"></div>
+    <div class="decor bottom-right"></div>
+
+    <main class="app-container">
+        <div class="header">
+            <h1>BOT Fx Rate Extractor (Serverless)</h1>
+            <p>Direct API Download formatted for the Treasury System.</p>
+        </div>
+
+        <form id="extractionForm" onsubmit="handleExtract(event)">
+            <div class="form-row">
+                <div class="form-group" style="flex: 1 1 30%;">
+                    <label for="target_date" class="form-label">Data Date</label>
+                    <input type="date" id="target_date" class="form-input" required>
+                </div>
+
+                <div class="form-group" style="flex: 1 1 60%;">
+                    <label for="api_token" class="form-label">API Token (X-IBM-Client-Id)</label>
+                    <input type="password" id="api_token" class="form-input" placeholder="Enter your IBM Client ID token" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+                <span class="btn-text">Extract Data</span>
+                <div class="spinner"></div>
+            </button>
+        </form>
+
+        <div class="alert-container" id="alertContainer"></div>
+
+        <div class="preview-section" id="previewSection">
+            <div class="preview-header">
+                <h2>Extracted Result</h2>
+                <button class="btn btn-success" id="downloadBtn" onclick="triggerDownload()">
+                    Download CSV
+                </button>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>data_date</th>
+                            <th>from_currency</th>
+                            <th>to_currency</th>
+                            <th>fx_rate</th>
+                            <th>buying_transfer</th>
+                            <th>selling</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let globalCsvData = "";
+        let globalFileName = "";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            
+            const formattedToday = `${yyyy}-${mm}-${dd}`;
+            const dateInput = document.getElementById('target_date');
+            dateInput.value = formattedToday;
+            dateInput.max = formattedToday; 
+        });
+
+        function formatDecimal(val) {
+            if (val === null || val === undefined || val === "") return "";
+            try {
+                return Number(val).toFixed(10);
+            } catch (e) {
+                return "";
+            }
+        }
+
+        async function handleExtract(event) {
+            event.preventDefault();
+            
+            const targetDate = document.getElementById('target_date').value;
+            const apiToken = document.getElementById('api_token').value;
+            const submitBtn = document.getElementById('submitBtn');
+            const alertContainer = document.getElementById('alertContainer');
+            const previewSection = document.getElementById('previewSection');
+            const tableBody = document.getElementById('tableBody');
+            
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+            alertContainer.innerHTML = '';
+            previewSection.style.display = 'none';
+            tableBody.innerHTML = '';
+            globalCsvData = "";
+
+            try {
+                const formData = new FormData();
+                formData.append('target_date', targetDate);
+                formData.append('api_token', apiToken);
+
+                const response = await fetch('/api/extract', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    alertContainer.innerHTML = `<div class='alert error'>Error: ${data.error || 'Unknown error occurred'}</div>`;
+                    submitBtn.classList.remove('loading');
+                    submitBtn.disabled = false;
+                    return;
+                }
+
+                const records = data.records || [];
+                globalCsvData = data.csv_data || "";
+                globalFileName = `fx_daily_${targetDate.replace(/-/g, '')}.csv`;
+
+                // Render Table
+                records.forEach(row => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${row.data_date}</td>
+                        <td>${row.from_currency}</td>
+                        <td>${row.to_currency}</td>
+                        <td>${row.fx_rate}</td>
+                        <td>${row.buying_transfer}</td>
+                        <td>${row.selling}</td>
+                    `;
+                    tableBody.appendChild(tr);
+                });
+                
+                previewSection.style.display = 'block';
+                alertContainer.innerHTML = "<div class='alert success'>Extraction successful! Review data below and click Download.</div>";
+                
+                setTimeout(() => previewSection.scrollIntoView({ behavior: 'smooth' }), 100);
+
+            } catch (error) {
+                console.error(error);
+                alertContainer.innerHTML = `<div class='alert error'>Network Error: Could not connect to the server backend. <br/><small>${error.message}</small></div>`;
+            } finally {
+                submitBtn.classList.remove('loading');
+                submitBtn.disabled = false;
+            }
+        }
+
+        function triggerDownload() {
+            if (!globalCsvData) return;
+            const blob = new Blob([globalCsvData], { type: 'text/csv;charset=utf-8;' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = globalFileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    </script>
+</body>
+</html>
