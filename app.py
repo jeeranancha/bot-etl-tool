@@ -20,7 +20,9 @@ def format_decimal(val):
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     # This renders your index.html
-    return templates.TemplateResponse(name="index.html", context={"request": request})
+        # CHANGE THIS ONE LINE ONLY
+    return templates.TemplateResponse(request=request, name="index.html")
+
 
 @app.post("/api/extract")
 async def extract_fx(target_date: str = Form(...), api_token: str = Form(...)):
