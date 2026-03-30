@@ -28,6 +28,11 @@ async def index(request: Request):
 async def extract_fx(target_date: str = Form(...), api_token: str = Form(...)):
     url = f"https://gateway.api.bot.or.th/Stat-ExchangeRate/v2/DAILY_AVG_EXG_RATE/?start_period={target_date}&end_period={target_date}"
     headers = {"X-IBM-Client-Id": api_token, "Accept": "application/json"}
+    headers = {
+        "X-IBM-Client-Id": api_token,
+        "Authorization": api_token,
+        "Accept": "application/json"
+    }
     
     try:
         response = requests.get(url, headers=headers)
